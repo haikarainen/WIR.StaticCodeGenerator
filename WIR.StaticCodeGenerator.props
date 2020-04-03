@@ -5,7 +5,7 @@
     <VulkanSDK>$(VULKAN_SDK)</VulkanSDK>
     <WIRFramework>$(ProjectDir)../WIR.Framework/</WIRFramework>
     <LLVM>C:/Program Files/LLVM/</LLVM>
-    <WIROutputDir>$(ProjectDir)\..\WIR.Output\</WIROutputDir>
+    <WIROutputDir>$(ProjectDir)../Workspace/Output/</WIROutputDir>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

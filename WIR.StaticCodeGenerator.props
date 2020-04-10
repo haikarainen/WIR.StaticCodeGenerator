@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <VulkanSDK>$(VULKAN_SDK)</VulkanSDK>
     <WIRFramework>$(ProjectDir)../WIR.Framework/</WIRFramework>
     <LLVM>C:/Program Files/LLVM/</LLVM>
     <WIROutputDir>$(ProjectDir)../Workspace/Output/</WIROutputDir>
@@ -10,10 +9,6 @@
   <PropertyGroup />
   <ItemDefinitionGroup />
   <ItemGroup>
-    <BuildMacro Include="VulkanSDK">
-      <Value>$(VulkanSDK)</Value>
-      <EnvironmentVariable>true</EnvironmentVariable>
-    </BuildMacro>
     <BuildMacro Include="WIRFramework">
       <Value>$(WIRFramework)</Value>
       <EnvironmentVariable>true</EnvironmentVariable>

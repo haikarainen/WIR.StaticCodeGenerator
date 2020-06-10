@@ -40,11 +40,11 @@ void CppGenerateTask::execute()
   {
     std::string ss;
     auto msgs = m_parsedHeader.getMessages();
-    ss = wir::formatString("%u Errors when parsing %s:\n", msgs.size(), inputFilename.c_str());
+    ss = wir::format("%u Errors when parsing %s:\n", msgs.size(), inputFilename.c_str());
 
     for(auto msg : msgs)
     {
-      ss += wir::formatString("\t%s\n", msg.prettyPrint().c_str());
+      ss += wir::format("\t%s\n", msg.prettyPrint().c_str());
     }
     
     Log("%s", ss.c_str());

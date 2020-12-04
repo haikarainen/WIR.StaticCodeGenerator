@@ -138,11 +138,11 @@ void CppGenerateTask::execute()
     outputFile << "{\n";
     if(parsedClass.isAbstract())
     {
-      outputFile << "  ::classInfo" << i << " = wir::Class::registerClass(\"" << parsedClass.getFullyQualifiedName() << "\", { " << bases << " }, [](wir::DynamicArguments const &args)->wir::Class*{ LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr; }, [](wir::DynamicArguments const &args)->wir::ClassPtr { LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr;} , [](wir::Class *c)->void{ LogWarning(\"Attempted to destruct pure virtual class " << parsedClass.getFullyQualifiedName() << "\"); });\n";
+      outputFile << "  ::classInfo" << i << " = wir::Class::registerClass(\"" << parsedClass.getFullyQualifiedName() << "\", { " << bases << " }, [](wir::DynamicArguments const &args){ LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr; }, [](wir::DynamicArguments const &args) { LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr;} , [](wir::Class *c)->void{ LogWarning(\"Attempted to destruct pure virtual class " << parsedClass.getFullyQualifiedName() << "\"); });\n";
     }
     else
     {
-      outputFile << "  ::classInfo" << i << " = wir::Class::registerClass(\"" << parsedClass.getFullyQualifiedName() << "\", { " << bases << " }, [](wir::DynamicArguments const &args)->wir::Class*{ return new " << parsedClass.getFullyQualifiedName() << "(args); }, [](wir::DynamicArguments const & args)->wir::ClassPtr{ return std::make_shared<" << parsedClass.getFullyQualifiedName() << ">(args); } , [](wir::Class *c)->void{ delete c; });\n";
+      outputFile << "  ::classInfo" << i << " = wir::Class::registerClass(\"" << parsedClass.getFullyQualifiedName() << "\", { " << bases << " }, [](wir::DynamicArguments const &args){ return dynamic_cast<wir::Class*>( new " << parsedClass.getFullyQualifiedName() << "(args) ); }, [](wir::DynamicArguments const & args){ return std::dynamic_pointer_cast<wir::Class>( std::make_shared<" << parsedClass.getFullyQualifiedName() << ">(args) ); } , [](wir::Class *c)->void{ delete c; });\n";
     }
 
     outputFile << "}\n";

@@ -1,25 +1,25 @@
 
-#include "CxxParse/HeaderFile.hpp"
 #include "CppGenerateTask.hpp"
+#include "CxxParse/HeaderFile.hpp"
 
-#include <WIR/String.hpp>
-#include <WIR/Error.hpp>
 #include <WIR/Async.hpp>
+#include <WIR/Error.hpp>
 #include <WIR/Filesystem.hpp>
+#include <WIR/String.hpp>
 
 #include <iostream>
 #include <string>
-#include <vector>
 #include <thread>
+#include <vector>
 
-struct Parameter 
+struct Parameter
 {
   Parameter(std::string _name, std::string _value = "true")
   {
     name = _name;
     value = _value;
   }
-  
+
   std::string name;
   std::string value;
 };
@@ -27,27 +27,27 @@ struct Parameter
 std::vector<Parameter> parseArguments(int argc, char **argv)
 {
   std::vector<Parameter> returner;
-  for(int32_t i = 0; i < argc; i++)
+  for (int32_t i = 0; i < argc; i++)
   {
     std::string currArg = wir::trim(argv[i]);
-    if(currArg.size() < 4 || currArg.substr(0, 2) != "--")
+    if (currArg.size() < 4 || currArg.substr(0, 2) != "--")
     {
-      returner.push_back({ currArg, "" });
+      returner.push_back({currArg, ""});
       continue;
     }
-    
+
     currArg = currArg.substr(2);
     std::string::size_type found = currArg.find_first_of("=");
-    if(found == std::string::npos || found == currArg.size() - 1)
+    if (found == std::string::npos || found == currArg.size() - 1)
     {
-      returner.push_back({currArg, "true"}); 
+      returner.push_back({currArg, "true"});
     }
-    else 
+    else
     {
-      returner.push_back({currArg.substr(0, found), currArg.substr(found+1)});
+      returner.push_back({currArg.substr(0, found), currArg.substr(found + 1)});
     }
   }
-  
+
   return returner;
 }
 
@@ -108,8 +108,8 @@ void generate(std::vector<Parameter> &parameters)
   }
 
   std::vector<std::string> inputHeaders;
-  inputDir.iterate(true, [&](wir::FilesystemEntry *entry)->void {
-    wir::File *file = dynamic_cast<wir::File*>(entry);
+  inputDir.iterate(true, [&](wir::FilesystemEntry *entry) -> void {
+    wir::File *file = dynamic_cast<wir::File *>(entry);
     if (!file)
     {
       return;
@@ -130,7 +130,7 @@ void generate(std::vector<Parameter> &parameters)
   }
   std::recursive_mutex generateTasksMutex;
   std::set<CppGenerateTaskPtr> generateTasks;
-  std::atomic_bool allJobsDone{ false };
+  std::atomic_bool allJobsDone{false};
 
   int32_t threadPoolSize = int32_t(std::thread::hardware_concurrency()) - 2;
   if (threadPoolSize < 1)
@@ -191,10 +191,7 @@ void generate(std::vector<Parameter> &parameters)
       break;
     }
   }
-
-
 }
-  
 
 int main(int argc, char **argv)
 {
@@ -209,14 +206,14 @@ int main(int argc, char **argv)
     Log("");
 
     auto parameters = parseArguments(argc, argv);
-  
+
     Log("Runtime parameters:");
-    for(auto param : parameters)
+    for (auto param : parameters)
     {
       Log("%s = %s", param.name.c_str(), param.value.c_str());
     }
     Log("");
-  
+
     generate(parameters);
   }
   catch (std::exception e)

@@ -1,5 +1,5 @@
 
-#pragma once 
+#pragma once
 
 #include <WIR/Stream.hpp>
 
@@ -9,13 +9,13 @@
 class AnnotatedSymbol
 {
 public:
-    virtual ~AnnotatedSymbol();
-    bool serialize(wir::Stream & toStream) const;
-    bool deserialize(wir::Stream & fromStream);
-    
-    void addAnnotation(std::string const & newAnnotation);
-    bool hasAnnotation(std::string const & reference);
-    
+  virtual ~AnnotatedSymbol();
+  bool serialize(wir::Stream &toStream) const;
+  bool deserialize(wir::Stream &fromStream);
+
+  void addAnnotation(std::string const &newAnnotation);
+  bool hasAnnotation(std::string const &reference);
+
 protected:
-    std::vector<std::string> m_annotations;
-}; 
+  std::vector<std::string> m_annotations;
+};

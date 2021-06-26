@@ -2,18 +2,17 @@
 #include "CxxParse/HeaderFile.hpp"
 #include "CxxParse/EnumDeclaration.hpp"
 
-#include <WIR/Stream.hpp>
-#include <WIR/Filesystem.hpp>
 #include <WIR/Error.hpp>
+#include <WIR/Filesystem.hpp>
+#include <WIR/Stream.hpp>
 
 #include <clang-c/Index.h>
-#include <sstream>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <sstream>
 #include <stack>
 
-
-static std::string getCursorLocationPath(CXCursor & cursor)
+static std::string getCursorLocationPath(CXCursor &cursor)
 {
   CXSourceLocation loc = clang_getCursorLocation(cursor);
   CXFile file;
@@ -25,7 +24,6 @@ static std::string getCursorLocationPath(CXCursor & cursor)
   CXString filepathcl = clang_getFileName(file);
   return wir::File(clang_getCString(filepathcl)).path();
 }
-
 
 struct _VisitData
 {
@@ -61,8 +59,6 @@ std::stack<std::string> getNamespaceFrom(CXCursor c)
   return ns;
 }
 
-
-
 std::string getFQNameFrom(CXCursor c)
 {
   std::string fq;
@@ -73,86 +69,84 @@ std::string getFQNameFrom(CXCursor c)
     ns.pop();
   }
 
-  fq += clang_getCString( clang_getCursorSpelling(c) );
+  fq += clang_getCString(clang_getCursorSpelling(c));
 
   return fq;
 }
 
 static CXChildVisitResult _kcgHeader_visitAnnotations(CXCursor cursor, CXCursor parent, CXClientData client_data)
 {
-    AnnotatedSymbol * annotated = (AnnotatedSymbol *)client_data;
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    std::string parentName = clang_getCString(clang_getCursorSpelling(parent));
-    CXCursorKind kind = clang_getCursorKind(cursor);
-    
-    if(kind == CXCursor_AnnotateAttr)
-    {
-        std::string newAnnotation = clang_getCString(clang_getCursorDisplayName(cursor));
-        annotated->addAnnotation(newAnnotation);
-    }
-    
-    return CXChildVisit_Continue;
+  AnnotatedSymbol *annotated = (AnnotatedSymbol *)client_data;
+  std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+  std::string parentName = clang_getCString(clang_getCursorSpelling(parent));
+  CXCursorKind kind = clang_getCursorKind(cursor);
+
+  if (kind == CXCursor_AnnotateAttr)
+  {
+    std::string newAnnotation = clang_getCString(clang_getCursorDisplayName(cursor));
+    annotated->addAnnotation(newAnnotation);
+  }
+
+  return CXChildVisit_Continue;
 }
 
 static CXChildVisitResult _kcgHeader_visitEnumDecl(CXCursor cursor, CXCursor parent, CXClientData client_data)
 {
-    EnumDeclaration * enumDecl = (EnumDeclaration*)client_data;
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    CXCursorKind kind = clang_getCursorKind(cursor);
+  EnumDeclaration *enumDecl = (EnumDeclaration *)client_data;
+  std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+  CXCursorKind kind = clang_getCursorKind(cursor);
 
-    if(kind == CXCursor_EnumConstantDecl)
-    {
-        enumDecl->addVariable(name, clang_getEnumConstantDeclValue(cursor));
-    }
+  if (kind == CXCursor_EnumConstantDecl)
+  {
+    enumDecl->addVariable(name, clang_getEnumConstantDeclValue(cursor));
+  }
 
-    return CXChildVisit_Recurse;
+  return CXChildVisit_Recurse;
 }
 
 static CXChildVisitResult _kcgHeader_visitClassDecl(CXCursor cursor, CXCursor parent, CXClientData client_data)
 {
-    ClassDeclaration *classDecl = (ClassDeclaration*)client_data;
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    std::string parentName = clang_getCString(clang_getCursorSpelling(parent));
-    CXCursorKind kind = clang_getCursorKind(cursor);
+  ClassDeclaration *classDecl = (ClassDeclaration *)client_data;
+  std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+  std::string parentName = clang_getCString(clang_getCursorSpelling(parent));
+  CXCursorKind kind = clang_getCursorKind(cursor);
 
-    if(kind == CXCursor_CXXBaseSpecifier)
-    {
-        std::string className = getFQNameFrom(clang_getCursorDefinition(cursor));
-        classDecl->addBaseClass(className);
-    }
-    else if (kind == CXCursor_CXXMethod)
-    {
-        const static std::map<CX_CXXAccessSpecifier, AccessSpecifier> accessMap = {{CX_CXXPublic, AS_Public}, {CX_CXXProtected, AS_Protected}, {CX_CXXPrivate, AS_Private}, {CX_CXXInvalidAccessSpecifier, AS_Public}};
+  if (kind == CXCursor_CXXBaseSpecifier)
+  {
+    std::string className = getFQNameFrom(clang_getCursorDefinition(cursor));
+    classDecl->addBaseClass(className);
+  }
+  else if (kind == CXCursor_CXXMethod)
+  {
+    const static std::map<CX_CXXAccessSpecifier, AccessSpecifier> accessMap = {{CX_CXXPublic, AS_Public}, {CX_CXXProtected, AS_Protected}, {CX_CXXPrivate, AS_Private}, {CX_CXXInvalidAccessSpecifier, AS_Public}};
 
-        MethodDeclaration newMethod(clang_getCString(clang_getCursorSpelling(cursor)), accessMap.at(clang_getCXXAccessSpecifier(cursor)), clang_CXXMethod_isPureVirtual(cursor));
-        clang_visitChildren(cursor, _kcgHeader_visitAnnotations, dynamic_cast<AnnotatedSymbol*>(&newMethod));
-        
-        classDecl->addMethodDeclaration(newMethod);
-    }
-    
-    
-    return CXChildVisit_Continue;
+    MethodDeclaration newMethod(clang_getCString(clang_getCursorSpelling(cursor)), accessMap.at(clang_getCXXAccessSpecifier(cursor)), clang_CXXMethod_isPureVirtual(cursor));
+    clang_visitChildren(cursor, _kcgHeader_visitAnnotations, dynamic_cast<AnnotatedSymbol *>(&newMethod));
+
+    classDecl->addMethodDeclaration(newMethod);
+  }
+
+  return CXChildVisit_Continue;
 }
 
 static CXChildVisitResult _kcgHeader_visitClassDecl_onlyBases(CXCursor cursor, CXCursor parent, CXClientData client_data)
 {
-  _VisitData *visitData = (_VisitData*)client_data;
-    HeaderFile *header = visitData->header;
-    CXCursorKind kind = clang_getCursorKind(cursor);
+  _VisitData *visitData = (_VisitData *)client_data;
+  HeaderFile *header = visitData->header;
+  CXCursorKind kind = clang_getCursorKind(cursor);
 
-    if(kind == CXCursor_CXXBaseSpecifier)
-    {
-        std::string className = clang_getCString(clang_getCursorSpelling(clang_getCursorDefinition(cursor)));
-        header->registerBaseClass(getFQNameFrom(parent), getFQNameFrom(cursor));
-    }
+  if (kind == CXCursor_CXXBaseSpecifier)
+  {
+    std::string className = clang_getCString(clang_getCursorSpelling(clang_getCursorDefinition(cursor)));
+    header->registerBaseClass(getFQNameFrom(parent), getFQNameFrom(cursor));
+  }
 
-    return CXChildVisit_Continue;
+  return CXChildVisit_Continue;
 }
-
 
 static CXChildVisitResult _kcgHeader_visitUnit(CXCursor cursor, CXCursor parent, CXClientData client_data)
 {
-  _VisitData *visitData = (_VisitData*)client_data;
+  _VisitData *visitData = (_VisitData *)client_data;
   HeaderFile *header = visitData->header;
   std::string name = clang_getCString(clang_getCursorSpelling(cursor));
   CXCursorKind kind = clang_getCursorKind(cursor);
@@ -169,14 +163,13 @@ static CXChildVisitResult _kcgHeader_visitUnit(CXCursor cursor, CXCursor parent,
 
   bool sameOrigin = filepath == header->getFilePath() && !isForwardDeclaration(cursor);
 
-  std::stack<std::string >nss = visitData->ns;
+  std::stack<std::string> nss = visitData->ns;
   std::string ns;
   while (!nss.empty())
   {
     ns += "::" + nss.top();
     nss.pop();
   }
-
 
   if ((kind == CXCursor_ClassDecl || kind == CXCursor_StructDecl) && !isForwardDeclaration(cursor))
   {
@@ -190,7 +183,7 @@ static CXChildVisitResult _kcgHeader_visitUnit(CXCursor cursor, CXCursor parent,
       ClassDeclaration newDecl(name, visitData->ns, isAbstract);
 
       clang_visitChildren(cursor, _kcgHeader_visitClassDecl, &newDecl);
-      clang_visitChildren(cursor, _kcgHeader_visitAnnotations, dynamic_cast<AnnotatedSymbol*>(&newDecl));
+      clang_visitChildren(cursor, _kcgHeader_visitAnnotations, dynamic_cast<AnnotatedSymbol *>(&newDecl));
 
       for (auto base : newDecl.getBaseClasses())
       {
@@ -225,16 +218,16 @@ static CXChildVisitResult _kcgHeader_visitUnit(CXCursor cursor, CXCursor parent,
   return CXChildVisit_Continue;
 }
 
-bool HeaderFile::doesAnyClassInherit(std::string const & parentClass) const
+bool HeaderFile::doesAnyClassInherit(std::string const &parentClass) const
 {
-  for(auto c : m_classDeclarations)
+  for (auto c : m_classDeclarations)
   {
-    if(doesClassInherit(c.getFullyQualifiedName(), parentClass))
+    if (doesClassInherit(c.getFullyQualifiedName(), parentClass))
     {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -242,55 +235,54 @@ HeaderFile::HeaderFile()
 {
 }
 
-HeaderFile::HeaderFile(std::string const & inHeaderFilePath, std::vector<std::string> const & cxxFlagsExtra)
+HeaderFile::HeaderFile(std::string const &inHeaderFilePath, std::vector<std::string> const &cxxFlagsExtra)
 {
   m_filePath = wir::File(inHeaderFilePath).path();
   m_valid = true;
-  
+
   CXIndex clangIndex = clang_createIndex(0, 0);
 
   std::vector<std::string> cxxFlagsBase = {
-      "-D", "__CODE_GENERATOR__", "-std=c++17" 
-  };
-  
+      "-D", "__CODE_GENERATOR__", "-std=c++17"};
+
   std::vector<std::string> cxxFlagsAll;
   cxxFlagsAll.insert(cxxFlagsAll.end(), cxxFlagsBase.begin(), cxxFlagsBase.end());
   cxxFlagsAll.insert(cxxFlagsAll.end(), cxxFlagsExtra.begin(), cxxFlagsExtra.end());
-  
+
   /*std::string flagStr;
-  for(auto flag : cxxFlagsAll)
-  {
-    flagStr.append(flag);
-    flagStr.append(" ");
-  }
-  
-  KLog::print("Full command: clang %s %s\n", m_filePath.c_str(), flagStr.c_str());*/
-  
+	for(auto flag : cxxFlagsAll)
+	{
+	  flagStr.append(flag);
+	  flagStr.append(" ");
+	}
+
+	KLog::print("Full command: clang %s %s\n", m_filePath.c_str(), flagStr.c_str());*/
+
   uint64_t numFlags = cxxFlagsAll.size();
-  
-  char** cxxFlags_c = new char*[numFlags];
-  for(uint64_t i = 0; i < numFlags; i++)
+
+  char **cxxFlags_c = new char *[numFlags];
+  for (uint64_t i = 0; i < numFlags; i++)
   {
-      uint64_t currSize = cxxFlagsAll[i].size() + 1;
-      cxxFlags_c[i] = new char[currSize];
-      snprintf(cxxFlags_c[i], currSize, "%s", cxxFlagsAll[i].c_str());
+    uint64_t currSize = cxxFlagsAll[i].size() + 1;
+    cxxFlags_c[i] = new char[currSize];
+    snprintf(cxxFlags_c[i], currSize, "%s", cxxFlagsAll[i].c_str());
   }
-  
+
   CXTranslationUnit translationUnit = nullptr;
   //CXErrorCode error = clang_parseTranslationUnit2(clangIndex, m_filePath.c_str(), cxxFlags_c, numFlags, nullptr, 0, CXTranslationUnit_None, &translationUnit);
   CXErrorCode error = clang_parseTranslationUnit2(clangIndex, m_filePath.c_str(), cxxFlags_c, numFlags, nullptr, 0, CXTranslationUnit_None, &translationUnit);
   //CXErrorCode error = clang_parseTranslationUnit2FullArgv(
   //    clangIndex, m_filePath.c_str(), cxxFlags_c, numFlags, nullptr, 0, CXTranslationUnit_None, &translationUnit
   //);
-  
-  for(uint64_t i = 0; i < numFlags; i++)
+
+  for (uint64_t i = 0; i < numFlags; i++)
   {
     delete[] cxxFlags_c[i];
   }
-  
+
   delete[] cxxFlags_c;
-  
-  if(error != CXError_Success)
+
+  if (error != CXError_Success)
   {
     m_valid = false;
     HeaderMessage newMessage;
@@ -299,18 +291,18 @@ HeaderFile::HeaderFile(std::string const & inHeaderFilePath, std::vector<std::st
     newMessage.severity = MS_Fatal;
     m_messages.push_back(newMessage);
   }
-  
-  if(m_valid)
+
+  if (m_valid)
   {
     // Fill the diagnostics messages
     uint32_t numDiagnostics = clang_getNumDiagnostics(translationUnit);
-    for(uint32_t i = 0; i < numDiagnostics; i++)
+    for (uint32_t i = 0; i < numDiagnostics; i++)
     {
       HeaderMessage newMessage;
-      
+
       CXDiagnostic currDiag = clang_getDiagnostic(translationUnit, i);
       CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(currDiag);
-      
+
       // Get the expansion location
       CXSourceLocation loc = clang_getDiagnosticLocation(currDiag);
       CXFile file;
@@ -318,11 +310,9 @@ HeaderFile::HeaderFile(std::string const & inHeaderFilePath, std::vector<std::st
       uint32_t _col;
       uint32_t wutno;
 
-      
       clang_getExpansionLocation(loc, &file, &_line, &_col, &wutno);
       CXString clangFile = clang_getFileName(file);
-      char const * cFile = clang_getCString(clangFile);
-
+      char const *cFile = clang_getCString(clangFile);
 
       if (cFile != nullptr)
       {
@@ -335,113 +325,110 @@ HeaderFile::HeaderFile(std::string const & inHeaderFilePath, std::vector<std::st
       newMessage.message = clang_getCString(clang_getDiagnosticSpelling(currDiag));
       newMessage.line = _line;
       newMessage.col = _col;
-      
-      switch(severity)
+
+      switch (severity)
       {
-        case CXDiagnostic_Error:
-          newMessage.severity = MS_Error;
-          m_valid = false;
-          break;
-        case CXDiagnostic_Fatal:
-          newMessage.severity = MS_Fatal;
-          m_valid = false;
-          break;
-        case CXDiagnostic_Warning:
-          newMessage.severity = MS_Warning;
-          break;
-        case CXDiagnostic_Note:
-          newMessage.severity = MS_Notice;
-          break;
-        case CXDiagnostic_Ignored:
-          newMessage.severity = MS_Ignored;
-          break;
+      case CXDiagnostic_Error:
+        newMessage.severity = MS_Error;
+        m_valid = false;
+        break;
+      case CXDiagnostic_Fatal:
+        newMessage.severity = MS_Fatal;
+        m_valid = false;
+        break;
+      case CXDiagnostic_Warning:
+        newMessage.severity = MS_Warning;
+        break;
+      case CXDiagnostic_Note:
+        newMessage.severity = MS_Notice;
+        break;
+      case CXDiagnostic_Ignored:
+        newMessage.severity = MS_Ignored;
+        break;
       }
-      
+
       m_messages.push_back(newMessage);
     }
-  
 
     CXCursor cursor = clang_getTranslationUnitCursor(translationUnit);
-    _VisitData visitData { this };
+    _VisitData visitData{this};
 
     clang_visitChildren(cursor, _kcgHeader_visitUnit, &visitData);
   }
-  
+
   // Dispose of the translation unit, this closes file handles and frees up memory
   clang_disposeTranslationUnit(translationUnit);
-
 }
 
-void HeaderFile::addClassDeclaration(const ClassDeclaration& newDecl)
+void HeaderFile::addClassDeclaration(const ClassDeclaration &newDecl)
 {
   m_classDeclarations.push_back(newDecl);
 }
 
-void HeaderFile::addEnumDeclaration(const EnumDeclaration& newDecl)
+void HeaderFile::addEnumDeclaration(const EnumDeclaration &newDecl)
 {
   m_enumDeclarations.push_back(newDecl);
 }
 
-void HeaderFile::registerBaseClass(std::string const & childClassName, std::string const &  parentClassName)
+void HeaderFile::registerBaseClass(std::string const &childClassName, std::string const &parentClassName)
 {
-  std::set<std::string> & bases =  m_inheritMap[childClassName];
+  std::set<std::string> &bases = m_inheritMap[childClassName];
   bases.insert(parentClassName);
 }
 
-std::set<std::string> HeaderFile::getInheritedClassesFor(std::string const &  className, bool topLevelOnly)  const
+std::set<std::string> HeaderFile::getInheritedClassesFor(std::string const &className, bool topLevelOnly) const
 {
   auto finder = m_inheritMap.find(className);
-  if(finder == m_inheritMap.end())
+  if (finder == m_inheritMap.end())
   {
-      return {};
+    return {};
   }
-  
+
   std::set<std::string> returner;
-  
-  for(auto base : finder->second)
+
+  for (auto base : finder->second)
   {
-      returner.insert(base);
-      
-      if(!topLevelOnly)
-      {
-          std::set<std::string> deepBases = getInheritedClassesFor(base, false);
-          returner.merge(deepBases);
-      }
+    returner.insert(base);
+
+    if (!topLevelOnly)
+    {
+      std::set<std::string> deepBases = getInheritedClassesFor(base, false);
+      returner.merge(deepBases);
+    }
   }
 
   return returner;
 }
 
-
-bool HeaderFile::doesClassInherit(std::string const &  className, std::string const &  parentClass)  const
+bool HeaderFile::doesClassInherit(std::string const &className, std::string const &parentClass) const
 {
   auto v = getInheritedClassesFor(className, false);
   return (v.find(parentClass) != v.end());
 }
 
-bool HeaderFile::serialize(wir::Stream & toStream) const
+bool HeaderFile::serialize(wir::Stream &toStream) const
 {
   toStream << m_valid;
   toStream << m_filePath;
   toStream << (uint64_t)m_inheritMap.size();
-  for(auto e : m_inheritMap)
+  for (auto e : m_inheritMap)
   {
     toStream << e.first;
     toStream << (uint64_t)e.second.size();
-    for(auto s : e.second)
+    for (auto s : e.second)
     {
       toStream << s;
     }
   }
-  
+
   toStream << (uint64_t)m_classDeclarations.size();
-  for(auto c : m_classDeclarations)
+  for (auto c : m_classDeclarations)
   {
     toStream << c;
   }
-  
+
   toStream << (uint64_t)m_enumDeclarations.size();
-  for(auto e : m_enumDeclarations)
+  for (auto e : m_enumDeclarations)
   {
     toStream << e;
   }
@@ -449,44 +436,44 @@ bool HeaderFile::serialize(wir::Stream & toStream) const
   return true;
 }
 
-bool HeaderFile::deserialize(wir::Stream & fromStream)
+bool HeaderFile::deserialize(wir::Stream &fromStream)
 {
   fromStream >> m_valid;
   fromStream >> m_filePath;
-  
+
   m_inheritMap.clear();
   uint64_t numInherit = 0;
   fromStream >> numInherit;
-  for(uint64_t i = 0; i < numInherit; i++)
+  for (uint64_t i = 0; i < numInherit; i++)
   {
     std::string inheritClass = "";
     fromStream >> inheritClass;
-    
+
     uint64_t numBases = 0;
     fromStream >> numBases;
-    
-    for(uint64_t j = 0; j < numBases; j++)
+
+    for (uint64_t j = 0; j < numBases; j++)
     {
       std::string baseClass = "";
       fromStream >> baseClass;
       m_inheritMap[inheritClass].insert(baseClass);
     }
   }
-  
+
   m_classDeclarations.clear();
   uint64_t numClasses;
   fromStream >> numClasses;
-  for(uint64_t i = 0; i < numClasses; i++)
+  for (uint64_t i = 0; i < numClasses; i++)
   {
     ClassDeclaration newDecl;
     fromStream >> newDecl;
     m_classDeclarations.push_back(newDecl);
   }
-  
+
   m_enumDeclarations.clear();
   uint64_t numEnums;
   fromStream >> numEnums;
-  for(uint64_t i = 0; i < numEnums; i++)
+  for (uint64_t i = 0; i < numEnums; i++)
   {
     EnumDeclaration newDecl;
     fromStream >> newDecl;
@@ -498,27 +485,27 @@ bool HeaderFile::deserialize(wir::Stream & fromStream)
 
 std::string HeaderMessage::prettyPrint()
 {
-  
+
   std::stringstream ss;
-  switch(severity)
+  switch (severity)
   {
-    case MS_Fatal:
-      ss << "Fatal: ";
-      break;
-    case MS_Error:
-      ss << "Error: ";
-      break;
-    case MS_Warning:
-      ss << "Warning: ";
-      break;
-    case MS_Notice:
-      ss << "Notice: ";
-      break;
-    case MS_Ignored:
-      ss << "Ignored: ";
-      break;
+  case MS_Fatal:
+    ss << "Fatal: ";
+    break;
+  case MS_Error:
+    ss << "Error: ";
+    break;
+  case MS_Warning:
+    ss << "Warning: ";
+    break;
+  case MS_Notice:
+    ss << "Notice: ";
+    break;
+  case MS_Ignored:
+    ss << "Ignored: ";
+    break;
   }
-  
-   ss << " in file \"" << filename << "\":" << line << ":" << col << ": " << message;
-   return ss.str();
+
+  ss << " in file \"" << filename << "\":" << line << ":" << col << ": " << message;
+  return ss.str();
 }

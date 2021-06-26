@@ -5,34 +5,33 @@ EnumDeclaration::EnumDeclaration()
 {
 }
 
-EnumDeclaration::EnumDeclaration(const std::string& name, std::stack<std::string> ns)
+EnumDeclaration::EnumDeclaration(const std::string &name, std::stack<std::string> ns)
 {
   m_name = name;
   m_namespace = ns;
 }
 
-std::string const & EnumDeclaration::getName()
+std::string const &EnumDeclaration::getName()
 {
   return m_name;
 }
 
-void EnumDeclaration::setName(std::string const & newName)
+void EnumDeclaration::setName(std::string const &newName)
 {
   m_name = newName;
 }
 
-std::map<std::string, int64_t> const & EnumDeclaration::getVariables()
+std::map<std::string, int64_t> const &EnumDeclaration::getVariables()
 {
   return m_variables;
 }
 
-void EnumDeclaration::addVariable(const std::string& variableName, int64_t value)
+void EnumDeclaration::addVariable(const std::string &variableName, int64_t value)
 {
   m_variables[variableName] = value;
 }
 
-
-bool EnumDeclaration::serialize(wir::Stream & toStream) const
+bool EnumDeclaration::serialize(wir::Stream &toStream) const
 {
   toStream << m_name;
 
@@ -45,12 +44,12 @@ bool EnumDeclaration::serialize(wir::Stream & toStream) const
   }
 
   toStream << (uint64_t)m_variables.size();
-  for(auto v : m_variables)
+  for (auto v : m_variables)
   {
     toStream << v.first;
     toStream << v.second;
   }
-  
+
   if (!AnnotatedSymbol::serialize(toStream))
   {
     return false;
@@ -59,10 +58,10 @@ bool EnumDeclaration::serialize(wir::Stream & toStream) const
   return true;
 }
 
-bool EnumDeclaration::deserialize(wir::Stream & fromStream)
+bool EnumDeclaration::deserialize(wir::Stream &fromStream)
 {
   fromStream >> m_name;
-  
+
   m_namespace = std::stack<std::string>();
   uint32_t nsLen = 0;
   fromStream >> nsLen;
@@ -76,17 +75,17 @@ bool EnumDeclaration::deserialize(wir::Stream & fromStream)
   m_variables.clear();
   uint64_t numValues = 0;
   fromStream >> numValues;
-  for(uint64_t i = 0; i < numValues; i++)
+  for (uint64_t i = 0; i < numValues; i++)
   {
     std::string newName;
     fromStream >> newName;
-    
+
     int64_t newValue = 0;
     fromStream >> newValue;
-    
+
     m_variables[newName] = newValue;
   }
-  
+
   if (!AnnotatedSymbol::deserialize(fromStream))
   {
     return false;
@@ -94,7 +93,6 @@ bool EnumDeclaration::deserialize(wir::Stream & fromStream)
 
   return true;
 }
-
 
 std::string EnumDeclaration::getFullyQualifiedName() const
 {

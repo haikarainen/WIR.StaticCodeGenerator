@@ -138,7 +138,7 @@ void CppGenerateTask::execute()
     outputFile << "{\n";
     if (parsedClass.isAbstract())
     {
-      outputFile << "  ::classInfo" << i << " = wir::Class::registerClass(\"" << parsedClass.getFullyQualifiedName() << "\", { " << bases << " }, [](wir::DynamicArguments const &args){ LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr; }, [](wir::DynamicArguments const &args) { LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr;} , [](wir::Class *c)->void{ LogWarning(\"Attempted to destruct pure virtual class " << parsedClass.getFullyQualifiedName() << "\"); });\n";
+      outputFile << "  ::classInfo" << i << " = wir::Class::registerClass(\"" << parsedClass.getFullyQualifiedName() << "\", { " << bases << " }, [](wir::DynamicArguments const &args){ LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr; }, [](wir::DynamicArguments const &args) { LogWarning(\"Attempted to construct pure virtual class instance " << parsedClass.getFullyQualifiedName() << "\"); return nullptr;} , [](wir::Class *c)->void{ delete c; });\n";
     }
     else
     {

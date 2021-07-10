@@ -123,6 +123,7 @@ void CppGenerateTask::execute()
     outputFile << "  wir::ClassInfo *classInfo" << i << " = nullptr;\n";
     outputFile << "}\n";
     outputFile << "\n";
+
     outputFile << "wir::ClassInfo * " << parsedClass.getFullyQualifiedName() << "::classInfo()\n";
     outputFile << "{\n";
     outputFile << "  if (::classInfo" << i << ")\n";
@@ -134,6 +135,20 @@ void CppGenerateTask::execute()
     outputFile << "  return ::classInfo" << i << ";\n";
     outputFile << "}\n";
     outputFile << "\n";
+
+    outputFile << "wir::ClassInfo * " << parsedClass.getFullyQualifiedName() << "::staticClassInfo()\n";
+    outputFile << "{\n";
+    outputFile << "  if (::classInfo" << i << ")\n";
+    outputFile << "  {\n";
+    outputFile << "    return ::classInfo" << i << ";\n";
+    outputFile << "  }\n";
+    outputFile << "\n";
+    outputFile << "  ::classInfo" << i << " = wir::Class::classInfo(\"" << parsedClass.getFullyQualifiedName() << "\");\n";
+    outputFile << "  return ::classInfo" << i << ";\n";
+    outputFile << "}\n";
+    outputFile << "\n";
+
+
     outputFile << "void " << parsedClass.getFullyQualifiedName() << "::initializeClass()\n";
     outputFile << "{\n";
     if (parsedClass.isAbstract())

@@ -59,6 +59,25 @@ std::stack<std::string> getNamespaceFrom(CXCursor c)
   return ns;
 }
 
+bool cleanFQNameFwdDecl(std::string cluttered, std::string &uncluttered)
+{
+  auto split = wir::split(wir::trim(cluttered), { ' ', '\t', '\n', '\r' });
+  if (split.size() != 1)
+  {
+    if (split.size() == 0)
+    {
+      LogError("Invalid classname: \"%s\"", cluttered.c_str());
+      return false;
+    }
+    else if (wir::trim(split[0]) == "struct" || wir::trim(split[0]) == "class")
+    {
+      uncluttered = wir::trim(wir::substring(cluttered, split[0].size()));
+      return true;
+    }
+  }
+  return true;
+}
+
 std::string getFQNameFrom(CXCursor c)
 {
   std::string fq;
@@ -70,6 +89,12 @@ std::string getFQNameFrom(CXCursor c)
   }
 
   fq += clang_getCString(clang_getCursorSpelling(c));
+
+  // Handle forward declarations more gracefully
+  if (!cleanFQNameFwdDecl(fq, fq))
+  {
+    LogError("Failed to clean possible forward declaration");
+  }
 
   return fq;
 }
@@ -138,6 +163,7 @@ static CXChildVisitResult _kcgHeader_visitClassDecl_onlyBases(CXCursor cursor, C
   if (kind == CXCursor_CXXBaseSpecifier)
   {
     std::string className = clang_getCString(clang_getCursorSpelling(clang_getCursorDefinition(cursor)));
+
     header->registerBaseClass(getFQNameFrom(parent), getFQNameFrom(cursor));
   }
 
